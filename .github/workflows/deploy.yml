@@ -1,13 +1,27 @@
-name: Deploy (home-server)
+name: Deploy to Home Server
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
   deploy:
-    runs-on: [self-hosted, home-server]
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy
-        run: |
-          bash /srv/apps/abdulalloh1.uz/app/deploy/deploy.sh
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /srv/apps/abdulalloh1.uz/app
+            git fetch --all
+            git reset --hard origin/main
+            docker compose up -d --build
