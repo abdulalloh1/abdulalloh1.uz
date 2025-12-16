@@ -1,38 +1,49 @@
-steps:
-  - uses: actions/checkout@v4
+name: Deploy to Home Server
 
-  - name: Install cloudflared
-    run: |
-      curl -L -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-      sudo dpkg -i cloudflared.deb
-      cloudflared --version
+on:
+  push:
+    branches: [ "main" ]
 
-  - name: Prepare SSH key
-    run: |
-      mkdir -p ~/.ssh
-      echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
-      chmod 600 ~/.ssh/id_rsa
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-  - name: SSH via Cloudflare Access and deploy
-    env:
-      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-      SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_USER: ${{ secrets.SSH_USER }}
-    run: |
-      cat >> ~/.ssh/config <<EOF
-      Host home-server
-        HostName ${SSH_HOST}
-        User ${SSH_USER}
-        IdentityFile ~/.ssh/id_rsa
-        StrictHostKeyChecking no
-        ProxyCommand cloudflared access ssh --hostname %h --service-token-id ${CF_ACCESS_CLIENT_ID} --service-token-secret ${CF_ACCESS_CLIENT_SECRET}
-      EOF
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      ssh home-server <<'CMD'
-      set -e
-      cd /srv/apps/abdulalloh1.uz/app
-      git fetch --all
-      git reset --hard origin/main
-      docker compose up -d --build
-      CMD
+      - name: Install cloudflared
+        run: |
+          curl -L -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+          cloudflared --version
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: SSH via Cloudflare Access and deploy
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          cat >> ~/.ssh/config <<EOF
+          Host home-server
+            HostName ${SSH_HOST}
+            User ${SSH_USER}
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+            ProxyCommand cloudflared access ssh --hostname %h --service-token-id ${CF_ACCESS_CLIENT_ID} --service-token-secret ${CF_ACCESS_CLIENT_SECRET}
+          EOF
+
+          ssh home-server <<'CMD'
+          set -e
+          cd /srv/apps/abdulalloh1.uz/app
+          git fetch --all
+          git reset --hard origin/main
+          docker compose up -d --build
+          CMD
