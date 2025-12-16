@@ -1,0 +1,13 @@
+name: Deploy (home-server)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, home-server]
+    steps:
+      - name: Deploy
+        run: |
+          bash /srv/apps/abdulalloh1.uz/app/deploy/deploy.sh
